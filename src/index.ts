@@ -1,52 +1,22 @@
-import express from 'express'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import fs from "fs";
+import path from "path";
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+export default function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-const app = express()
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: "Email & password required" });
 
-// Home route - HTML
-app.get('/', (req, res) => {
-  res.type('html').send(`
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8"/>
-        <title>Express on Vercel</title>
-        <link rel="stylesheet" href="/style.css" />
-      </head>
-      <body>
-        <nav>
-          <a href="/">Home</a>
-          <a href="/about">About</a>
-          <a href="/api-data">API Data</a>
-          <a href="/healthz">Health</a>
-        </nav>
-        <h1>Welcome to Express on Vercel 🚀</h1>
-        <p>This is a minimal example without a database or forms.</p>
-        <img src="/logo.png" alt="Logo" width="120" />
-      </body>
-    </html>
-  `)
-})
+  // Read users.json
+  const filePath = path.join(process.cwd(), "users.json");
+  const users = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-app.get('/about', function (req, res) {
-  res.sendFile(path.join(__dirname, '..', 'components', 'about.htm'))
-})
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-// Example API endpoint - JSON
-app.get('/api-data', (req, res) => {
-  res.json({
-    message: 'Here is some sample API data',
-    items: ['apple', 'banana', 'cherry'],
-  })
-})
-
-// Health check
-app.get('/healthz', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
-})
-
-export default app
+  // Return user profile directly
+  res.status(200).json({
+    success: true,
+    profile: { email: user.email, balance: user.balance }
+  });
+}
